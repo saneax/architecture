@@ -3,19 +3,18 @@ apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 
 transformers:
-  # Set namespace to OpenStack on all namespaced objects without a namespace
   - |-
-    apiVersion: builtin
-    kind: NamespaceTransformer
-    metadata:
-      name: _ignored_
-      namespace: openstack
-    setRoleBindingSubjects: none
-    unsetOnly: true
-    fieldSpecs:
-    - path: metadata/name
-      kind: Namespace
-      create: true
+      apiVersion: builtin
+      kind: NamespaceTransformer
+      metadata:
+        name: _ignored_
+        namespace: openstack
+      setRoleBindingSubjects: none
+      unsetOnly: true
+      fieldSpecs:
+        - path: metadata/name
+          kind: Namespace
+          create: true
 
 components:
   - ../../../lib/networking/metallb
@@ -23,32 +22,16 @@ components:
   - ../../../lib/networking/nad
   - ../../../lib/control-plane
 
-resources:
-  - policy.yaml
-
 replacements:
-  # Neutron control plane OvS DPDK & SRIOV customization
   - source:
       kind: ConfigMap
       name: service-values
-      fieldPath: data.neutron.customServiceConfig
+      fieldPath: data.galera.templates.openstack-cell2
     targets:
       - select:
           kind: OpenStackControlPlane
         fieldPaths:
-          - spec.neutron.template.customServiceConfig
-        options:
-          create: true
-  # OVN control plane OvS DPDK customization
-  - source:
-      kind: ConfigMap
-      name: service-values
-      fieldPath: data.ovn.ovnController.nicMappings
-    targets:
-      - select:
-          kind: OpenStackControlPlane
-        fieldPaths:
-          - spec.ovn.template.ovnController.nicMappings
+          - spec.galera.templates.openstack-cell2
         options:
           create: true
   - source:
@@ -108,34 +91,45 @@ replacements:
           create: true
   - source:
       kind: ConfigMap
-      name: service-values
-      fieldPath: data.telemetry.template.metricStorage
+      name: network-values
+      fieldPath: data.rabbitmq-cell2.endpoint_annotations
     targets:
       - select:
           kind: OpenStackControlPlane
         fieldPaths:
-          - spec.telemetry.template.metricStorage
+          - spec.rabbitmq.templates.rabbitmq-cell2.override.service.metadata.annotations
         options:
           create: true
   - source:
       kind: ConfigMap
       name: service-values
-      fieldPath: data.extraMounts
+      fieldPath: data.rabbitmq.templates.rabbitmq-cell2.replicas
     targets:
       - select:
           kind: OpenStackControlPlane
         fieldPaths:
-          - spec.extraMounts
+          - spec.rabbitmq.templates.rabbitmq-cell2.replicas
+        options:
+          create: true
+  - source:
+      kind: ConfigMap
+      name: network-values
+      fieldPath: data.lbServiceType
+    targets:
+      - select:
+          kind: OpenStackControlPlane
+        fieldPaths:
+          - spec.rabbitmq.templates.rabbitmq-cell2.override.service.spec.type
         options:
           create: true
   - source:
       kind: ConfigMap
       name: service-values
-      fieldPath: data.nova.schedulerServiceTemplate.customServiceConfig
+      fieldPath: data.nova.template.cellTemplates.cell2
     targets:
       - select:
           kind: OpenStackControlPlane
         fieldPaths:
-          - spec.nova.template.schedulerServiceTemplate.customServiceConfig
+          - spec.nova.template.cellTemplates.cell2
         options:
           create: true
